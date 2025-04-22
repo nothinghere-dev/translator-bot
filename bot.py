@@ -1,45 +1,42 @@
+import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 
-BOT_TOKEN = 'توکن ربات'
-CHANNEL_ID = '@channelusername'  # یا -1001234567890
+# توکن ربات و آیدی کانال از متغیر محیطی
+BOT_TOKEN = os.environ['7817372297:AAG2aWYxi7zXRz8rMQpVJSIZQHayRwxM0PE']
+CHANNEL_ID = os.environ['t3t123098']
 
-translator = Translator()
+# تابع برای ترجمه متن
+def translate_text(text, target_language="fa"):
+    translated = GoogleTranslator(source='auto', target=target_language).translate(text)
+    return translated
 
-async def handle_forwarded(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message.forward_date:
-        return
+# تابع برای ارسال پیام به کانال
+async def forward_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # دریافت پیام فوروارد شده
+    forwarded_text = update.message.text
+    
+    # ترجمه پیام
+    translated_text = translate_text(forwarded_text)
+    
+    # اضافه کردن متن دلخواه به انتهای پیام ترجمه شده
+    final_text = translated_text + "\n\n#ترجمه‌شده"
 
-    # اگر پیام متنی بود
-    if update.message.text:
-        original_text = update.message.text
-        translation = translator.translate(original_text, dest='fa').text
-        final_text = f"{translation}\n\n📝 ترجمه شده توسط ربات مترجم ما"
-        await context.bot.send_message(chat_id=CHANNEL_ID, text=final_text)
+    # ارسال پیام به کانال
+    await context.bot.send_message(chat_id=CHANNEL_ID, text=final_text)
 
-    # اگر عکس بود
-    elif update.message.photo:
-        caption = update.message.caption or ""
-        translated = translator.translate(caption, dest='fa').text if caption else ""
-        await context.bot.send_photo(chat_id=CHANNEL_ID, photo=update.message.photo[-1].file_id,
-                                     caption=f"{translated}\n\n🖼️ ترجمه شده")
+# ساخت ربات و افزودن هندلر
+async def main():
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # اگر ویدیو بود
-    elif update.message.video:
-        caption = update.message.caption or ""
-        translated = translator.translate(caption, dest='fa').text if caption else ""
-        await context.bot.send_video(chat_id=CHANNEL_ID, video=update.message.video.file_id,
-                                     caption=f"{translated}\n\n🎥 ترجمه شده")
+    # هندلر برای پیام‌های فوروارد شده
+    forward_handler = MessageHandler(filters.Filters.text & ~filters.Filters.command, forward_message)
+    application.add_handler(forward_handler)
 
-    # اگر فایل بود (document)
-    elif update.message.document:
-        caption = update.message.caption or ""
-        translated = translator.translate(caption, dest='fa').text if caption else ""
-        await context.bot.send_document(chat_id=CHANNEL_ID, document=update.message.document.file_id,
-                                        caption=f"{translated}\n\n📎 ترجمه شده")
+    # اجرای ربات
+    await application.run_polling()
 
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.FORWARDED, handle_forwarded))
-
-app.run_polling()
+if __name__ == '__main__':
+    import asyncio
+    asyncio.run(main())
