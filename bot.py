@@ -1,53 +1,34 @@
-import os
+import logging
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 from deep_translator import GoogleTranslator
+import os
 
-# توکن ربات و آیدی کانال از متغیر محیطی
-BOT_TOKEN = os.environ['BOT_TOKEN']
-CHANNEL_ID = os.environ['CHANNEL_ID']
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHANNEL_ID = os.environ.get("CHANNEL_ID")  # کانال آیدی رو هم بذار تو محیط امن
 
-# تابع برای ترجمه متن
-def translate_text(text, target_language="fa"):
-    translated = GoogleTranslator(source='auto', target=target_language).translate(text)
-    return translated
+async def handle_forwarded_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.forward_from_chat or update.message.forward_from:
+        original_text = update.message.text
+        if original_text:
+            try:
+                translated = GoogleTranslator(source='auto', target='en').translate(original_text)
+                await context.bot.send_message(chat_id=CHANNEL_ID, text=translated)
+            except Exception as e:
+                await update.message.reply_text(f"Error: {e}")
+        else:
+            await update.message.reply_text("No text to translate.")
 
-# تابع برای ارسال پیام به کانال
-async def forward_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # دریافت پیام فوروارد شده
-    forwarded_text = update.message.text
-    
-    # ترجمه پیام
-    translated_text = translate_text(forwarded_text)
-    
-    # اضافه کردن متن دلخواه به انتهای پیام ترجمه شده
-    final_text = translated_text + "\n\n#ترجمه‌شده"
-
-    # ارسال پیام به کانال
-    await context.bot.send_message(chat_id=CHANNEL_ID, text=final_text)
-
-# ساخت ربات و افزودن هندلر
-async def main():
+def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    # هندلر برای پیام‌های فوروارد شده
-    forward_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, forward_message)
-    application.add_handler(forward_handler)
-
-    # اجرای ربات
-    await application.run_polling()
-
-import asyncio
+    handler = MessageHandler(filters.FORWARDED & filters.TEXT, handle_forwarded_message)
+    application.add_handler(handler)
+    application.run_polling()
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except RuntimeError as e:
-        if "event loop is running" in str(e):
-            loop = asyncio.get_event_loop()
-            loop.create_task(main())
-            loop.run_forever()
-        else:
-            raise
-
+    main()
