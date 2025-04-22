@@ -32,7 +32,7 @@ async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # هندلر برای پیام‌های فوروارد شده
-    forward_handler = MessageHandler(filters.Filters.text & ~filters.Filters.command, forward_message)
+    forward_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, forward_message)
     application.add_handler(forward_handler)
 
     # اجرای ربات
