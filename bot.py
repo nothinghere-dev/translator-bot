@@ -4,8 +4,9 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTyp
 from deep_translator import GoogleTranslator
 
 # توکن ربات و آیدی کانال از متغیر محیطی
-BOT_TOKEN = os.environ['7817372297:AAG2aWYxi7zXRz8rMQpVJSIZQHayRwxM0PE']
-CHANNEL_ID = os.environ['t3t123098']
+BOT_TOKEN = os.environ['BOT_TOKEN']
+CHANNEL_ID = os.environ['CHANNEL_ID']
+
 
 # تابع برای ترجمه متن
 def translate_text(text, target_language="fa"):
